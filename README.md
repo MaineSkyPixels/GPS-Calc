@@ -2,6 +2,14 @@
 
 A comprehensive web application designed for surveyors to perform GPS coordinate format conversion and precise distance calculations between multiple coordinate points, with built-in surveying accuracy standards and assessments.
 
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/MaineSkyPixels/GPS-Calc)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-1.0.0-orange?style=flat-square)](https://github.com/MaineSkyPixels/GPS-Calc/releases)
+
+## 🌐 Live Demo
+
+[Open GPS Calculator](https://maineskypixels.github.io/GPS-Calc/) - Try the application online
+
 ## Features
 
 ### Coordinate Format Converter
@@ -80,6 +88,28 @@ A comprehensive web application designed for surveyors to perform GPS coordinate
 - **Cumulative**: Total distance following the sequence of points
 - **Dynamic Units**: Automatically scales to appropriate units (mm, cm, m, km) for optimal readability
 - **Precision**: Handles measurements down to 0.001 mm for high-precision surveying applications
+
+## 🚀 Quick Start
+
+### Option 1: Use Online (Recommended)
+1. Visit the [Live Demo](https://maineskypixels.github.io/GPS-Calc/)
+2. No installation required - works in any modern browser
+
+### Option 2: Download and Run Locally
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/MaineSkyPixels/GPS-Calc.git
+   cd GPS-Calc
+   ```
+
+2. **Open in browser**:
+   - Simply open `index.html` in any modern web browser
+   - No server setup required - runs entirely in the browser
+
+3. **Start using**:
+   - Paste coordinates in the converter section
+   - Add multiple coordinates for distance calculations
+   - Choose your preferred unit system
 
 ## Technical Details
 
