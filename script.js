@@ -856,26 +856,43 @@ class GPSCalculatorApp {
     /**
      * Show share success modal
      */
-    showShareSuccess(shareId) {
+    async showShareSuccess(shareId) {
         document.getElementById('share-id-text').textContent = shareId;
         document.getElementById('share-url-input').value = this.storageManager.getSharingUrl(shareId);
         
-        // Generate QR code
+        // Generate QR code (now properly async)
         const qrContainer = document.getElementById('qr-code-container');
-        const qrDataUrl = this.storageManager.generateQRCode(shareId);
         
-        if (qrDataUrl) {
+        // Show loading state
+        qrContainer.innerHTML = '<small style="color: #888;">Generating QR code...</small>';
+        
+        try {
+            // Wait for QR code to be generated
+            const qrDataUrl = await this.storageManager.generateQRCode(shareId);
+            
+            if (qrDataUrl) {
+                qrContainer.innerHTML = `
+                    <div style="text-align: center; padding: 10px;">
+                        <img src="${qrDataUrl}" alt="QR Code for ${shareId}" style="max-width: 200px; height: auto; border: 1px solid #404040; border-radius: 4px;">
+                        <br><small style="color: #888; margin-top: 10px; display: block;">QR Code for: ${shareId}</small>
+                    </div>
+                `;
+                console.log('QR code displayed successfully');
+            } else {
+                qrContainer.innerHTML = `
+                    <div style="padding: 20px; background: #2c2c2c; color: #888; border-radius: 4px; text-align: center;">
+                        QR Code for: ${shareId}<br>
+                        <small>QR code generation unavailable. Please copy the URL manually.</small>
+                    </div>
+                `;
+                console.warn('QR code generation returned null');
+            }
+        } catch (error) {
+            console.error('Error generating QR code:', error);
             qrContainer.innerHTML = `
-                <div style="text-align: center; padding: 10px;">
-                    <img src="${qrDataUrl}" alt="QR Code for ${shareId}" style="max-width: 200px; height: auto;">
-                    <br><small>QR Code for: ${shareId}</small>
-                </div>
-            `;
-        } else {
-            qrContainer.innerHTML = `
-                <div style="padding: 20px; background: #f0f0f0; color: #333; border-radius: 4px; text-align: center;">
+                <div style="padding: 20px; background: #2c2c2c; color: #888; border-radius: 4px; text-align: center;">
                     QR Code for: ${shareId}<br>
-                    <small>QR code generation failed. Please copy the URL manually.</small>
+                    <small>Error generating QR code. Please copy the URL manually.</small>
                 </div>
             `;
         }
@@ -913,18 +930,39 @@ class GPSCalculatorApp {
      * Load shared calculation
      */
     async loadSharedCalculation(shareId) {
+        console.log('Loading shared calculation:', shareId);
+        
         try {
             const calculation = await this.storageManager.getSharedCalculation(shareId);
             
-            if (calculation) {
-                this.loadCalculationData(calculation.data);
-                alert(`Loaded shared calculation: ${calculation.data.name || 'Unnamed'}`);
-            } else {
+            if (!calculation) {
+                console.warn('Calculation not found or expired');
                 alert('Shared calculation not found or expired.');
+                return;
             }
+            
+            console.log('Loaded calculation:', calculation);
+            
+            // Extract the data - calculation.data contains the full calculation object
+            const calculationData = calculation.data;
+            
+            if (!calculationData || !calculationData.coordinates) {
+                console.error('Invalid calculation data structure', calculationData);
+                alert('Invalid calculation data. Cannot load.');
+                return;
+            }
+            
+            // Load the calculation into the UI
+            this.loadCalculationData(calculationData);
+            
+            // Show success message
+            const name = calculationData.name || 'Unnamed Calculation';
+            alert(`Successfully loaded shared calculation: ${name}`);
+            console.log('Calculation loaded successfully');
+            
         } catch (error) {
             console.error('Error loading shared calculation:', error);
-            alert('Failed to load shared calculation.');
+            alert('Failed to load shared calculation: ' + error.message);
         }
     }
 

@@ -304,16 +304,24 @@ class StorageManager {
     /**
      * Generate QR code for sharing
      * @param {string} shareId - Share ID
-     * @returns {string} - QR code data URL
+     * @returns {Promise<string|null>} - Promise that resolves to QR code data URL
      */
-    generateQRCode(shareId) {
+    async generateQRCode(shareId) {
         const url = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
         
-        try {
-            // Check if QRCode library is available
-            if (typeof QRCode !== 'undefined') {
+        return new Promise((resolve) => {
+            try {
+                // Check if QRCode library is available
+                if (typeof QRCode === 'undefined') {
+                    console.warn('QRCode library not loaded');
+                    resolve(null);
+                    return;
+                }
+                
                 // Create a canvas element to generate QR code
                 const canvas = document.createElement('canvas');
+                
+                // Use QRCode.toCanvas with proper async handling
                 QRCode.toCanvas(canvas, url, {
                     width: 200,
                     height: 200,
@@ -325,18 +333,25 @@ class StorageManager {
                 }, (error) => {
                     if (error) {
                         console.error('QR code generation error:', error);
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // Successfully generated - convert to data URL
+                    try {
+                        const dataUrl = canvas.toDataURL('image/png');
+                        console.log('QR code generated successfully');
+                        resolve(dataUrl);
+                    } catch (err) {
+                        console.error('Error converting canvas to data URL:', err);
+                        resolve(null);
                     }
                 });
-                
-                return canvas.toDataURL();
-            } else {
-                console.warn('QRCode library not loaded');
-                return null;
+            } catch (error) {
+                console.error('QR code generation failed:', error);
+                resolve(null);
             }
-        } catch (error) {
-            console.error('QR code generation failed:', error);
-            return null;
-        }
+        });
     }
 
     /**
