@@ -160,7 +160,11 @@ class StorageManager {
 
         // Try to fetch from server
         try {
-            return await this.fetchFromServer(shareId);
+            const data = await this.fetchFromServer(shareId);
+            if (data) {
+                return { data: data, shareId: shareId };
+            }
+            return null;
         } catch (error) {
             console.error('Failed to fetch shared calculation:', error);
             return null;
