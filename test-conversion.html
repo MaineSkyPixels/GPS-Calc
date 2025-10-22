@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coordinate Conversion Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .success { color: green; font-weight: bold; }
+        .error { color: red; font-weight: bold; }
+        .info { color: blue; }
+        table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Coordinate Conversion Test</h1>
+    <div id="output"></div>
+    
+    <script src="coordinate-parser.js"></script>
+    <script src="coordinate-converter.js"></script>
+    <script>
+        // Test coordinate conversion functionality
+        let output = '';
+        
+        const parser = new CoordinateParser();
+        const converter = new CoordinateConverter();
+        
+        // Test 1: DMS to Decimal Conversion
+        output += '<div class="test-section">';
+        output += '<h2>Test 1: DMS to Decimal Conversion</h2>';
+        
+        const dmsInputs = [
+            "44° 28' 24.32661\" -70° 53' 19.05717\"",
+            "N44° 28' 24.32661\" W70° 53' 19.05717\"",
+            "44 28 24.32661 -70 53 19.05717"
+        ];
+        
+        dmsInputs.forEach((input, index) => {
+            const result = parser.parseCoordinate(input);
+            const status = result ? 'success' : 'error';
+            const statusText = result ? 'PASS' : 'FAIL';
+            output += `<p class="${status}">Test ${index + 1}: "${input}" → ${statusText}</p>`;
+            if (result) {
+                output += `<p class="info">  Decimal: ${result.lat}, ${result.lon}</p>`;
+            }
+        });
+        output += '</div>';
+        
+        // Test 2: Decimal to DMS Conversion
+        output += '<div class="test-section">';
+        output += '<h2>Test 2: Decimal to DMS Conversion</h2>';
+        
+        const decimalInputs = [
+            { lat: 44.4734245277, lon: -70.88862750833 },
+            { lat: 45.1234567890, lon: -71.9876543210 },
+            { lat: -33.856784, lon: 151.213108 } // Sydney, Australia
+        ];
+        
+        decimalInputs.forEach((coord, index) => {
+            const dmsResult = converter.convertToDMS(coord.lat, coord.lon);
+            output += `<p class="info">Test ${index + 1}: ${coord.lat}, ${coord.lon}</p>`;
+            output += `<p class="info">  DMS: ${dmsResult.lat}, ${dmsResult.lon}</p>`;
+        });
+        output += '</div>';
+        
+        // Test 3: Round-trip Conversion Accuracy
+        output += '<div class="test-section">';
+        output += '<h2>Test 3: Round-trip Conversion Accuracy</h2>';
+        
+        const testCoords = [
+            { lat: 44.4734245277, lon: -70.88862750833 },
+            { lat: 0, lon: 0 }, // Equator/Prime Meridian
+            { lat: 90, lon: 0 }, // North Pole
+            { lat: -90, lon: 0 }, // South Pole
+            { lat: 0, lon: 180 }, // Date Line
+            { lat: 0, lon: -180 } // Date Line (negative)
+        ];
+        
+        output += '<table>';
+        output += '<tr><th>Original</th><th>DMS</th><th>Back to Decimal</th><th>Difference</th><th>Status</th></tr>';
+        
+        testCoords.forEach((coord, index) => {
+            const dms = converter.convertToDMS(coord.lat, coord.lon);
+            
+            // Parse the DMS back to decimal
+            const dmsStr = `${dms.lat}, ${dms.lon}`;
+            const backToDecimal = parser.parseCoordinate(dmsStr);
+            
+            if (backToDecimal) {
+                const latDiff = Math.abs(coord.lat - backToDecimal.lat);
+                const lonDiff = Math.abs(coord.lon - backToDecimal.lon);
+                const maxDiff = Math.max(latDiff, lonDiff);
+                const accurate = maxDiff < 0.000001; // Within 0.000001 degrees
+                
+                output += `<tr>
+                    <td>${coord.lat}, ${coord.lon}</td>
+                    <td>${dmsStr}</td>
+                    <td>${backToDecimal.lat}, ${backToDecimal.lon}</td>
+                    <td>${maxDiff.toExponential(3)}</td>
+                    <td class="${accurate ? 'success' : 'error'}">${accurate ? 'PASS' : 'FAIL'}</td>
+                </tr>`;
+            } else {
+                output += `<tr>
+                    <td>${coord.lat}, ${coord.lon}</td>
+                    <td>${dmsStr}</td>
+                    <td>ERROR</td>
+                    <td>-</td>
+                    <td class="error">FAIL</td>
+                </tr>`;
+            }
+        });
+        
+        output += '</table></div>';
+        
+        // Test 4: Format Detection
+        output += '<div class="test-section">';
+        output += '<h2>Test 4: Format Detection</h2>';
+        
+        const formatTests = [
+            { input: "44° 28' 24.32661\" -70° 53' 19.05717\"", expected: 'dms' },
+            { input: "N44° 28' 24.32661\" W70° 53' 19.05717\"", expected: 'dms' },
+            { input: "44.4734245277 -70.88862750833", expected: 'decimal' },
+            { input: "N44.4734245277 W70.88862750833", expected: 'decimal' },
+            { input: "invalid input", expected: 'unknown' }
+        ];
+        
+        formatTests.forEach((test, index) => {
+            const detected = parser.detectFormat(test.input);
+            const correct = detected === test.expected;
+            const status = correct ? 'success' : 'error';
+            output += `<p class="${status}">Test ${index + 1}: "${test.input}" → ${detected} ${correct ? '✅' : '❌'}</p>`;
+        });
+        output += '</div>';
+        
+        // Test 5: Clipboard Format
+        output += '<div class="test-section">';
+        output += '<h2>Test 5: Clipboard Format</h2>';
+        
+        const clipboardTest = converter.formatForClipboard(44.4734245277, -70.88862750833);
+        output += `<p class="info">Clipboard format: "${clipboardTest}"</p>`;
+        output += `<p class="info">Should contain tab character between lat and lon</p>`;
+        
+        const hasTab = clipboardTest.includes('\t');
+        output += `<p class="${hasTab ? 'success' : 'error'}">Tab character present: ${hasTab ? 'YES' : 'NO'}</p>`;
+        output += '</div>';
+        
+        document.getElementById('output').innerHTML = output;
+    </script>
+</body>
+</html>

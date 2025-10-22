@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Unit Scaling Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background-color: #f0f0f0; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .highlight { background-color: #ffffcc; }
+    </style>
+</head>
+<body>
+    <h1>Updated Unit Scaling Test</h1>
+    <div id="output"></div>
+    
+    <script src="script.js"></script>
+    <script>
+        // Create a test instance
+        const app = new GPSCalculatorApp();
+        
+        // Test various distance values with the new logic
+        const testDistances = [
+            0.000000001,  // 0.001 mm
+            0.00000001,   // 0.01 mm
+            0.0000001,    // 0.1 mm
+            0.000001,     // 1 mm
+            0.00001,      // 10 mm = 1 cm
+            0.0001,       // 100 mm = 10 cm
+            0.001,        // 1000 mm = 100 cm = 1 m
+            0.01,         // 10 m
+            0.1,          // 100 m
+            1,            // 1 km
+            10,           // 10 km
+            100,          // 100 km
+            1000          // 1000 km
+        ];
+        
+        let output = '<div class="test-section">';
+        output += '<h2>Updated Distance Unit Scaling Test</h2>';
+        output += '<table>';
+        output += '<tr><th>Kilometers</th><th>Formatted Output</th><th>Millimeters</th><th>Centimeters</th><th>Meters</th><th>Expected</th></tr>';
+        
+        testDistances.forEach(km => {
+            const formatted = app.formatDistanceWithDynamicUnits(km);
+            const mm = km * 1000000;
+            const cm = km * 100000;
+            const m = km * 1000;
+            
+            // Determine expected unit
+            let expected = '';
+            if (mm >= 0.1 && mm < 10) {
+                expected = `${mm.toFixed(3)} mm`;
+            } else if (mm >= 10 && mm < 1000) {
+                expected = `${(mm/10).toFixed(4)} cm`;
+            } else if (cm >= 100 && cm < 10000) {
+                expected = `${(cm/100).toFixed(3)} m`;
+            } else if (m >= 0.001 && m < 1000) {
+                expected = `${m.toFixed(6)} m`;
+            } else {
+                expected = `${km.toFixed(6)} km`;
+            }
+            
+            const isCorrect = formatted.value + ' ' + formatted.unit === expected;
+            const rowClass = isCorrect ? '' : 'highlight';
+            
+            output += `<tr class="${rowClass}">
+                <td>${km.toExponential(3)}</td>
+                <td><strong>${formatted.value} ${formatted.unit}</strong></td>
+                <td>${mm.toFixed(3)}</td>
+                <td>${cm.toFixed(3)}</td>
+                <td>${m.toFixed(3)}</td>
+                <td>${expected}</td>
+            </tr>`;
+        });
+        
+        output += '</table></div>';
+        
+        // Test with your specific example
+        output += '<div class="test-section">';
+        output += '<h2>Your Example: 12.345 mm should be 1.2345 cm</h2>';
+        
+        const testKm = 12.345 / 1000000; // Convert 12.345 mm to km
+        const formatted = app.formatDistanceWithDynamicUnits(testKm);
+        
+        output += `<p><strong>Input:</strong> 12.345 mm (${testKm.toExponential(6)} km)</p>`;
+        output += `<p><strong>Result:</strong> ${formatted.value} ${formatted.unit}</p>`;
+        output += `<p><strong>Expected:</strong> 1.2345 cm</p>`;
+        output += `<p><strong>Correct:</strong> ${formatted.value === 1.2345 && formatted.unit === 'cm' ? '✅ YES' : '❌ NO'}</p>`;
+        output += '</div>';
+        
+        // Test with your actual sample coordinates
+        output += '<div class="test-section">';
+        output += '<h2>Your Sample Coordinates Test</h2>';
+        output += '<p><strong>Point 1:</strong> 44.4734240583, -70.8886269917, 500.143m</p>';
+        output += '<p><strong>Point 2:</strong> 44.473424162, -70.888626958, 500.1308m</p>';
+        
+        // Calculate distance manually
+        const lat1 = 44.4734240583 * Math.PI / 180;
+        const lon1 = -70.8886269917 * Math.PI / 180;
+        const lat2 = 44.473424162 * Math.PI / 180;
+        const lon2 = -70.888626958 * Math.PI / 180;
+        
+        const dlat = lat2 - lat1;
+        const dlon = lon2 - lon1;
+        const a = Math.sin(dlat/2) * Math.sin(dlat/2) + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dlon/2) * Math.sin(dlon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        const distanceKm = 6371 * c;
+        
+        const formattedDistance = app.formatDistanceWithDynamicUnits(distanceKm);
+        
+        output += `<p><strong>Calculated Distance:</strong> ${distanceKm.toExponential(6)} km</p>`;
+        output += `<p><strong>Formatted Output:</strong> <strong>${formattedDistance.value} ${formattedDistance.unit}</strong></p>`;
+        output += `<p><strong>Should show as centimeters (cm) for better readability</strong></p>`;
+        output += '</div>';
+        
+        document.getElementById('output').innerHTML = output;
+    </script>
+</body>
+</html>
