@@ -1,0 +1,13 @@
+{
+  "data": {
+    "test": "data",
+    "coordinates": [
+      {
+        "lat": 44.473424,
+        "lon": -70.888627,
+        "elevation": 500
+      }
+    ]
+  },
+  "expirationPeriod": "24hr"
+}

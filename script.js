@@ -860,12 +860,25 @@ class GPSCalculatorApp {
         document.getElementById('share-id-text').textContent = shareId;
         document.getElementById('share-url-input').value = this.storageManager.getSharingUrl(shareId);
         
-        // Generate QR code (placeholder)
+        // Generate QR code
         const qrContainer = document.getElementById('qr-code-container');
-        qrContainer.innerHTML = `<div style="padding: 20px; background: #f0f0f0; color: #333; border-radius: 4px;">
-            QR Code for: ${shareId}<br>
-            <small>QR code generation requires additional library</small>
-        </div>`;
+        const qrDataUrl = this.storageManager.generateQRCode(shareId);
+        
+        if (qrDataUrl) {
+            qrContainer.innerHTML = `
+                <div style="text-align: center; padding: 10px;">
+                    <img src="${qrDataUrl}" alt="QR Code for ${shareId}" style="max-width: 200px; height: auto;">
+                    <br><small>QR Code for: ${shareId}</small>
+                </div>
+            `;
+        } else {
+            qrContainer.innerHTML = `
+                <div style="padding: 20px; background: #f0f0f0; color: #333; border-radius: 4px; text-align: center;">
+                    QR Code for: ${shareId}<br>
+                    <small>QR code generation failed. Please copy the URL manually.</small>
+                </div>
+            `;
+        }
         
         this.showShareModal();
     }

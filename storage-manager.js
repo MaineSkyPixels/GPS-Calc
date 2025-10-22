@@ -288,9 +288,35 @@ class StorageManager {
      */
     generateQRCode(shareId) {
         const url = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
-        // TODO: Implement QR code generation
-        // You can use a library like qrcode.js
-        return url;
+        
+        try {
+            // Check if QRCode library is available
+            if (typeof QRCode !== 'undefined') {
+                // Create a canvas element to generate QR code
+                const canvas = document.createElement('canvas');
+                QRCode.toCanvas(canvas, url, {
+                    width: 200,
+                    height: 200,
+                    margin: 2,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                }, (error) => {
+                    if (error) {
+                        console.error('QR code generation error:', error);
+                    }
+                });
+                
+                return canvas.toDataURL();
+            } else {
+                console.warn('QRCode library not loaded');
+                return null;
+            }
+        } catch (error) {
+            console.error('QR code generation failed:', error);
+            return null;
+        }
     }
 
     /**
