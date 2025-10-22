@@ -1,0 +1,14 @@
+# Cloudflare Pages Configuration for GPS Calculator Frontend
+name = "gps-calc"
+type = "javascript"
+
+# Build configuration - no build needed for static site
+[build]
+command = ""
+cwd = "./"
+watch_paths = []
+
+# Environment configuration
+[env.production]
+name = "gps-calc"
+route = "gps-calc-alpha.pages.dev/*"
