@@ -9,6 +9,7 @@ class GPSCalculatorApp {
         this.converter = new CoordinateConverter();
         this.distanceCalculator = new DistanceCalculator();
         this.storageManager = new StorageManager();
+        this.reportGenerator = new ReportGenerator();
         
         this.coordinates = [];
         this.maxCoordinates = 8;
@@ -41,6 +42,7 @@ class GPSCalculatorApp {
         // Storage and sharing buttons
         document.getElementById('save-calculation-btn').addEventListener('click', () => this.showSaveModal());
         document.getElementById('share-calculation-btn').addEventListener('click', () => this.showShareModal());
+        document.getElementById('download-report-btn').addEventListener('click', () => this.downloadReport());
         document.getElementById('load-calculation-btn').addEventListener('click', () => this.showLoadModal());
         document.getElementById('clear-storage-btn').addEventListener('click', () => this.clearAllStorage());
         
@@ -1431,6 +1433,59 @@ class GPSCalculatorApp {
         }
         
         document.body.removeChild(textArea);
+    }
+
+    /**
+     * Download calculation report as HTML file
+     */
+    downloadReport() {
+        if (!this.lastDistanceResults || this.coordinates.length < 2) {
+            alert('No calculation results available to download.');
+            return;
+        }
+
+        try {
+            const settings = {
+                unitSystem: document.getElementById('unit-system').value,
+                referenceMode: document.getElementById('reference-mode').checked,
+                condensedOutput: document.getElementById('condensed-output').checked
+            };
+
+            const calculationData = {
+                name: document.getElementById('calculation-name').value || 'GPS Calculation',
+                coordinates: this.coordinates,
+                results: this.lastDistanceResults
+            };
+
+            const reportHTML = this.reportGenerator.generateReport(calculationData, settings);
+            
+            // Create and download the file
+            const blob = new Blob([reportHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `gps-calculation-report-${new Date().toISOString().split('T')[0]}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            URL.revokeObjectURL(url);
+            
+            // Show success message
+            const originalText = document.getElementById('download-report-btn').textContent;
+            document.getElementById('download-report-btn').textContent = '✅ Downloaded!';
+            document.getElementById('download-report-btn').style.background = '#28a745';
+            
+            setTimeout(() => {
+                document.getElementById('download-report-btn').textContent = originalText;
+                document.getElementById('download-report-btn').style.background = '';
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error generating report:', error);
+            alert('Error generating report. Please try again.');
+        }
     }
 }
 

@@ -209,35 +209,72 @@ class StorageManager {
     }
 
     /**
-     * Save to server (placeholder - implement with your backend)
+     * Save to server (Cloudflare Workers API)
      * @param {Object} calculationData - Calculation data
      */
     async saveToServer(calculationData) {
-        // TODO: Implement server API call
-        // Example:
-        // const response = await fetch('/api/calculations', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     body: JSON.stringify(calculationData)
-        // });
-        // return response.json();
-        
-        console.log('Saving to server:', calculationData.shareId);
-        return { success: true, shareId: calculationData.shareId };
+        try {
+            // Use Cloudflare Workers API endpoint
+            const apiUrl = 'https://gps-calc-server.your-subdomain.workers.dev/api/share';
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    data: calculationData,
+                    expirationPeriod: calculationData.expiration || '24hr'
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return { success: true, shareId: result.shareId };
+        } catch (error) {
+            console.error('Error saving to server:', error);
+            // Fallback to local storage if server fails
+            return { success: false, error: error.message };
+        }
     }
 
     /**
-     * Fetch from server (placeholder - implement with your backend)
+     * Fetch from server (Cloudflare Workers API)
      * @param {string} shareId - Share ID
      */
     async fetchFromServer(shareId) {
-        // TODO: Implement server API call
-        // Example:
-        // const response = await fetch(`/api/calculations/${shareId}`);
-        // return response.json();
-        
-        console.log('Fetching from server:', shareId);
-        return null;
+        try {
+            // Use Cloudflare Workers API endpoint
+            const apiUrl = `https://gps-calc-server.your-subdomain.workers.dev/api/share/${shareId}`;
+            
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+
+            if (response.status === 404) {
+                return null; // Calculation not found
+            }
+
+            if (response.status === 410) {
+                throw new Error('Calculation has expired');
+            }
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.data; // Return the calculation data
+        } catch (error) {
+            console.error('Error fetching from server:', error);
+            return null;
+        }
     }
 
     /**

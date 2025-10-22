@@ -248,6 +248,28 @@ Potential improvements could include:
 - Batch processing of large coordinate sets
 - Advanced statistics and analysis tools
 
+## Backend API
+
+The sharing functionality is powered by a separate backend service:
+
+- **Repository**: [GPSCalcServer](https://github.com/MaineSkyPixels/GPSCalcServer)
+- **Technology**: Cloudflare Workers + D1 Database
+- **Features**: RESTful API, automatic expiration, CORS support
+- **Deployment**: Serverless, global edge deployment
+
+### API Endpoints
+
+- `POST /api/share` - Save calculation for sharing
+- `GET /api/share/{id}` - Retrieve shared calculation
+- `POST /api/cleanup` - Clean expired calculations
+
+### Setup Backend
+
+1. Clone the backend repository
+2. Follow the setup guide in [CLOUDFLARE_SETUP.md](https://github.com/MaineSkyPixels/GPSCalcServer/blob/main/CLOUDFLARE_SETUP.md)
+3. Deploy to Cloudflare Workers
+4. Update the API URL in `storage-manager.js`
+
 ## License
 
 This project is open source and available under the MIT License.
