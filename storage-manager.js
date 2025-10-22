@@ -215,7 +215,7 @@ class StorageManager {
     async saveToServer(calculationData) {
         try {
             // Use Cloudflare Workers API endpoint
-            const apiUrl = 'https://gps-calc-server.your-subdomain.workers.dev/api/share';
+            const apiUrl = 'https://gps-calc-server.maine-sky-pixels.workers.dev/api/share';
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -248,7 +248,7 @@ class StorageManager {
     async fetchFromServer(shareId) {
         try {
             // Use Cloudflare Workers API endpoint
-            const apiUrl = `https://gps-calc-server.your-subdomain.workers.dev/api/share/${shareId}`;
+            const apiUrl = `https://gps-calc-server.maine-sky-pixels.workers.dev/api/share/${shareId}`;
             
             const response = await fetch(apiUrl, {
                 method: 'GET',
