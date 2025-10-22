@@ -214,12 +214,30 @@ class StorageManager {
 
     /**
      * Save to server (Cloudflare Workers API)
-     * @param {Object} calculationData - Calculation data
+     * @param {Object} calculationData - Calculation data with id, data, timestamp, expiration, shared, shareId
      */
     async saveToServer(calculationData) {
         try {
             // Use Cloudflare Workers API endpoint
             const apiUrl = 'https://gps-calc-server.maine-sky-pixels.workers.dev/api/share';
+            
+            // Extract the calculation period from expiration timestamp
+            const now = Date.now();
+            const expirationMs = calculationData.expiration - now;
+            let expirationPeriod = '24hr'; // default
+            
+            // Map milliseconds back to period string
+            if (expirationMs <= 60 * 60 * 1000) {
+                expirationPeriod = '1hr';
+            } else if (expirationMs <= 24 * 60 * 60 * 1000) {
+                expirationPeriod = '24hr';
+            } else if (expirationMs <= 3 * 24 * 60 * 60 * 1000) {
+                expirationPeriod = '3days';
+            } else if (expirationMs <= 7 * 24 * 60 * 60 * 1000) {
+                expirationPeriod = '7days';
+            } else {
+                expirationPeriod = '14days';
+            }
             
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -227,16 +245,18 @@ class StorageManager {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    data: calculationData,
-                    expirationPeriod: calculationData.expiration || '24hr'
+                    data: calculationData.data,
+                    expirationPeriod: expirationPeriod
                 })
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
             }
 
             const result = await response.json();
+            console.log('Saved to server with share ID:', result.shareId);
             return { success: true, shareId: result.shareId };
         } catch (error) {
             console.error('Error saving to server:', error);
