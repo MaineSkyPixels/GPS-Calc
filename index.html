@@ -124,7 +124,11 @@
             <div id="distance-results" class="results-container" style="display: none;">
                 <div class="results-header">
                     <h3>Distance Results</h3>
-                    <button id="copy-results-btn" class="btn-secondary">Copy Results</button>
+                    <div class="results-actions">
+                        <button id="save-calculation-btn" class="btn-secondary">💾 Save</button>
+                        <button id="share-calculation-btn" class="btn-secondary">🔗 Share</button>
+                        <button id="copy-results-btn" class="btn-secondary">📋 Copy</button>
+                    </div>
                 </div>
                 
                 <div id="distance-matrix" class="distance-matrix">
@@ -136,11 +140,94 @@
                 </div>
             </div>
         </section>
+
+        <!-- Storage Management Section -->
+        <section id="storage-section" class="storage-section" style="display: none;">
+            <h2>Saved Calculations <span class="help-icon" onclick="showHelpPopup('storage')">❓</span></h2>
+            <div class="storage-controls">
+                <button id="load-calculation-btn" class="btn-primary">📂 Load Saved</button>
+                <button id="clear-storage-btn" class="btn-secondary">🗑️ Clear All</button>
+            </div>
+            <div id="saved-calculations" class="saved-calculations">
+                <!-- Saved calculations will be listed here -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Save/Share Modal -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Save Calculation</h3>
+                <button class="close-modal" onclick="closeSaveModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="calculation-name">Name (optional):</label>
+                    <input type="text" id="calculation-name" placeholder="My GPS Calculation">
+                </div>
+                <div class="form-group">
+                    <label for="expiration-period">Expiration:</label>
+                    <select id="expiration-period">
+                        <option value="1hr">1 Hour</option>
+                        <option value="24hr" selected>24 Hours</option>
+                        <option value="3days">3 Days</option>
+                        <option value="7days">7 Days</option>
+                        <option value="14days">14 Days</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="share-calculation"> Share with others
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-save-btn" class="btn-primary">Save</button>
+                <button class="btn-secondary" onclick="closeSaveModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Calculation</h3>
+                <button class="close-modal" onclick="closeShareModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="share-info">
+                    <p>Your calculation has been shared with ID:</p>
+                    <div class="share-id-display">
+                        <span id="share-id-text"></span>
+                        <button id="copy-share-id" class="btn-small">📋</button>
+                    </div>
+                </div>
+                <div class="share-url">
+                    <label>Share URL:</label>
+                    <div class="url-display">
+                        <input type="text" id="share-url-input" readonly>
+                        <button id="copy-share-url" class="btn-small">📋</button>
+                    </div>
+                </div>
+                <div class="qr-code-section">
+                    <label>QR Code:</label>
+                    <div id="qr-code-container">
+                        <!-- QR code will be generated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeShareModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <script src="coordinate-parser.js"></script>
     <script src="coordinate-converter.js"></script>
     <script src="distance-calculator.js"></script>
+    <script src="storage-manager.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

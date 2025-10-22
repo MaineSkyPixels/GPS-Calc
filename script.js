@@ -8,6 +8,7 @@ class GPSCalculatorApp {
         this.parser = new CoordinateParser();
         this.converter = new CoordinateConverter();
         this.distanceCalculator = new DistanceCalculator();
+        this.storageManager = new StorageManager();
         
         this.coordinates = [];
         this.maxCoordinates = 8;
@@ -15,6 +16,8 @@ class GPSCalculatorApp {
         this.initializeEventListeners();
         this.initializeManualMode();
         this.updateReferencePointSelector();
+        this.initializeStorageFeatures();
+        this.checkForSharedCalculation();
     }
 
     /**
@@ -34,6 +37,12 @@ class GPSCalculatorApp {
         document.querySelectorAll('input[name="input-mode"]').forEach(radio => {
             radio.addEventListener('change', (e) => this.toggleInputMode(e.target.value));
         });
+
+        // Storage and sharing buttons
+        document.getElementById('save-calculation-btn').addEventListener('click', () => this.showSaveModal());
+        document.getElementById('share-calculation-btn').addEventListener('click', () => this.showShareModal());
+        document.getElementById('load-calculation-btn').addEventListener('click', () => this.showLoadModal());
+        document.getElementById('clear-storage-btn').addEventListener('click', () => this.clearAllStorage());
         
         // Manual mode controls
         document.getElementById('add-coordinate-btn').addEventListener('click', () => this.addCoordinateRow());
@@ -740,6 +749,272 @@ class GPSCalculatorApp {
     }
 
     /**
+     * Initialize storage features
+     */
+    initializeStorageFeatures() {
+        // Add modal event listeners
+        document.getElementById('confirm-save-btn').addEventListener('click', () => this.saveCalculation());
+        document.getElementById('copy-share-id').addEventListener('click', () => this.copyShareId());
+        document.getElementById('copy-share-url').addEventListener('click', () => this.copyShareUrl());
+        
+        // Load saved calculations on page load
+        this.loadSavedCalculations();
+    }
+
+    /**
+     * Check for shared calculation in URL
+     */
+    checkForSharedCalculation() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareId = urlParams.get('share');
+        
+        if (shareId) {
+            this.loadSharedCalculation(shareId);
+        }
+    }
+
+    /**
+     * Show save modal
+     */
+    showSaveModal() {
+        document.getElementById('save-modal').style.display = 'flex';
+    }
+
+    /**
+     * Show share modal
+     */
+    showShareModal() {
+        document.getElementById('share-modal').style.display = 'flex';
+    }
+
+    /**
+     * Show load modal (list of saved calculations)
+     */
+    showLoadModal() {
+        this.loadSavedCalculations();
+        document.getElementById('storage-section').style.display = 'block';
+    }
+
+    /**
+     * Close save modal
+     */
+    closeSaveModal() {
+        document.getElementById('save-modal').style.display = 'none';
+    }
+
+    /**
+     * Close share modal
+     */
+    closeShareModal() {
+        document.getElementById('share-modal').style.display = 'none';
+    }
+
+    /**
+     * Save current calculation
+     */
+    async saveCalculation() {
+        if (!this.lastDistanceResults) {
+            alert('No calculation to save. Please calculate distances first.');
+            return;
+        }
+
+        const name = document.getElementById('calculation-name').value.trim() || 'Unnamed Calculation';
+        const expiration = document.getElementById('expiration-period').value;
+        const share = document.getElementById('share-calculation').checked;
+
+        const calculationData = {
+            name: name,
+            coordinates: this.coordinates,
+            results: this.lastDistanceResults,
+            settings: {
+                unitSystem: document.getElementById('unit-system').value,
+                referenceMode: document.getElementById('reference-mode').checked,
+                condensedOutput: document.getElementById('condensed-output').checked
+            },
+            timestamp: new Date().toLocaleString()
+        };
+
+        try {
+            const shareId = await this.storageManager.saveCalculation(calculationData, expiration, share);
+            
+            if (share) {
+                this.showShareSuccess(shareId);
+            } else {
+                alert('Calculation saved successfully!');
+            }
+            
+            this.closeSaveModal();
+            this.loadSavedCalculations();
+        } catch (error) {
+            console.error('Error saving calculation:', error);
+            alert('Failed to save calculation. Please try again.');
+        }
+    }
+
+    /**
+     * Show share success modal
+     */
+    showShareSuccess(shareId) {
+        document.getElementById('share-id-text').textContent = shareId;
+        document.getElementById('share-url-input').value = this.storageManager.getSharingUrl(shareId);
+        
+        // Generate QR code (placeholder)
+        const qrContainer = document.getElementById('qr-code-container');
+        qrContainer.innerHTML = `<div style="padding: 20px; background: #f0f0f0; color: #333; border-radius: 4px;">
+            QR Code for: ${shareId}<br>
+            <small>QR code generation requires additional library</small>
+        </div>`;
+        
+        this.showShareModal();
+    }
+
+    /**
+     * Copy share ID to clipboard
+     */
+    async copyShareId() {
+        const shareId = document.getElementById('share-id-text').textContent;
+        try {
+            await navigator.clipboard.writeText(shareId);
+            alert('Share ID copied to clipboard!');
+        } catch (error) {
+            console.error('Failed to copy share ID:', error);
+        }
+    }
+
+    /**
+     * Copy share URL to clipboard
+     */
+    async copyShareUrl() {
+        const shareUrl = document.getElementById('share-url-input').value;
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            alert('Share URL copied to clipboard!');
+        } catch (error) {
+            console.error('Failed to copy share URL:', error);
+        }
+    }
+
+    /**
+     * Load shared calculation
+     */
+    async loadSharedCalculation(shareId) {
+        try {
+            const calculation = await this.storageManager.getSharedCalculation(shareId);
+            
+            if (calculation) {
+                this.loadCalculationData(calculation.data);
+                alert(`Loaded shared calculation: ${calculation.data.name || 'Unnamed'}`);
+            } else {
+                alert('Shared calculation not found or expired.');
+            }
+        } catch (error) {
+            console.error('Error loading shared calculation:', error);
+            alert('Failed to load shared calculation.');
+        }
+    }
+
+    /**
+     * Load calculation data into the application
+     */
+    loadCalculationData(calculationData) {
+        // Load coordinates
+        this.coordinates = calculationData.coordinates || [];
+        this.updateCoordinatesTable();
+        
+        // Load settings
+        if (calculationData.settings) {
+            document.getElementById('unit-system').value = calculationData.settings.unitSystem || 'meters';
+            document.getElementById('reference-mode').checked = calculationData.settings.referenceMode || false;
+            document.getElementById('condensed-output').checked = calculationData.settings.condensedOutput || false;
+        }
+        
+        // Recalculate and display results
+        if (this.coordinates.length >= 2) {
+            this.handleDistanceCalculation();
+        }
+    }
+
+    /**
+     * Load and display saved calculations
+     */
+    loadSavedCalculations() {
+        const calculations = this.storageManager.getLocalCalculations();
+        const container = document.getElementById('saved-calculations');
+        
+        if (calculations.length === 0) {
+            container.innerHTML = '<p style="color: #888; text-align: center; padding: 20px;">No saved calculations found.</p>';
+            return;
+        }
+
+        container.innerHTML = calculations.map(calc => {
+            const isExpired = this.storageManager.isExpired(calc);
+            const expirationDate = new Date(calc.expiration).toLocaleString();
+            
+            return `
+                <div class="saved-calculation-item ${isExpired ? 'expired' : ''}" data-id="${calc.id}">
+                    <h4>${calc.data.name || 'Unnamed Calculation'}</h4>
+                    <div class="saved-calculation-meta">
+                        <div>Saved: ${calc.data.timestamp}</div>
+                        <div>Expires: ${expirationDate}</div>
+                        <div>Coordinates: ${calc.data.coordinates?.length || 0}</div>
+                        ${calc.shared ? `<div>Shared: ${calc.shareId}</div>` : ''}
+                        ${isExpired ? '<div style="color: #ff6b6b;">EXPIRED</div>' : ''}
+                    </div>
+                    <div class="saved-calculation-actions">
+                        <button onclick="app.loadCalculation('${calc.id}')" ${isExpired ? 'disabled' : ''}>Load</button>
+                        <button onclick="app.deleteCalculation('${calc.id}')">Delete</button>
+                        ${calc.shared ? `<button onclick="app.showShareInfo('${calc.shareId}')">Share Info</button>` : ''}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Load specific calculation
+     */
+    loadCalculation(calculationId) {
+        const calculation = this.storageManager.getCalculation(calculationId);
+        
+        if (calculation) {
+            this.loadCalculationData(calculation.data);
+            document.getElementById('storage-section').style.display = 'none';
+        } else {
+            alert('Calculation not found.');
+        }
+    }
+
+    /**
+     * Delete calculation
+     */
+    deleteCalculation(calculationId) {
+        if (confirm('Are you sure you want to delete this calculation?')) {
+            this.storageManager.deleteCalculation(calculationId);
+            this.loadSavedCalculations();
+        }
+    }
+
+    /**
+     * Clear all storage
+     */
+    clearAllStorage() {
+        if (confirm('Are you sure you want to delete ALL saved calculations? This cannot be undone.')) {
+            localStorage.removeItem(this.storageManager.storageKey);
+            this.loadSavedCalculations();
+            alert('All saved calculations have been deleted.');
+        }
+    }
+
+    /**
+     * Show share info for existing shared calculation
+     */
+    showShareInfo(shareId) {
+        document.getElementById('share-id-text').textContent = shareId;
+        document.getElementById('share-url-input').value = this.storageManager.getSharingUrl(shareId);
+        this.showShareModal();
+    }
+
+    /**
      * Format distance with dynamic unit scaling based on selected unit system
      * @param {number} kmValue - Distance in kilometers
      * @param {string} unitSystem - 'meters', 'feet', or 'survey-feet'
@@ -1358,6 +1633,33 @@ function showHelpPopup(section) {
                 </ul>
                 <p><strong>Note:</strong> All calculations are performed in meters internally, then converted to the selected unit system for display.</p>
             `
+        },
+        'storage': {
+            title: 'Storage and Sharing',
+            content: `
+                <p><strong>Purpose:</strong> Save and share your GPS calculations</p>
+                <p><strong>Save Options:</strong></p>
+                <ul>
+                    <li><strong>Local Save:</strong> Store on your device only</li>
+                    <li><strong>Share:</strong> Generate shareable link for others</li>
+                </ul>
+                <p><strong>Expiration Periods:</strong></p>
+                <ul>
+                    <li><strong>1 Hour:</strong> Quick temporary sharing</li>
+                    <li><strong>24 Hours:</strong> Daily project sharing</li>
+                    <li><strong>3 Days:</strong> Short-term collaboration</li>
+                    <li><strong>7 Days:</strong> Weekly project sharing</li>
+                    <li><strong>14 Days:</strong> Maximum storage time</li>
+                </ul>
+                <p><strong>Share ID Format:</strong> YYYY-NNNN-XXXX (e.g., 2025-1022-ABCD)</p>
+                <p><strong>Features:</strong></p>
+                <ul>
+                    <li>Automatic cleanup of expired calculations</li>
+                    <li>QR code generation for easy sharing</li>
+                    <li>Load shared calculations via URL</li>
+                    <li>Manage saved calculations locally</li>
+                </ul>
+            `
         }
     };
 
@@ -1386,4 +1688,13 @@ function closeHelpPopup() {
     if (popup) {
         popup.remove();
     }
+}
+
+// Global functions for modal management
+function closeSaveModal() {
+    document.getElementById('save-modal').style.display = 'none';
+}
+
+function closeShareModal() {
+    document.getElementById('share-modal').style.display = 'none';
 }

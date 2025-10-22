@@ -53,3 +53,6 @@ node_modules/
 # Temporary files
 *.tmp
 *.temp
+
+# Sample data files
+samplegps.txt
