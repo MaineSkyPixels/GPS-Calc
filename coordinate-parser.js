@@ -185,7 +185,7 @@ class CoordinateParser {
         } else if (parts.length === 3) {
             // lat, lon, elevation
             coordinateStr = parts.slice(0, 2).join(' ');
-            elevation = parseFloat(parts[2]);
+            elevation = this.validateElevation(parseFloat(parts[2]));
         } else {
             // More than 3 parts - try to find coordinate pattern
             // Look for the coordinate part (contains degree symbols or is decimal)
@@ -196,7 +196,7 @@ class CoordinateParser {
                     coordinateStr = testStr;
                     // Check if there's an elevation after the coordinate
                     if (i + 2 < parts.length) {
-                        elevation = parseFloat(parts[i + 2]);
+                        elevation = this.validateElevation(parseFloat(parts[i + 2]));
                     }
                     break;
                 }
@@ -206,7 +206,7 @@ class CoordinateParser {
                 // Fallback: try first two parts as coordinate
                 coordinateStr = parts.slice(0, 2).join(' ');
                 if (parts.length > 2) {
-                    elevation = parseFloat(parts[2]);
+                    elevation = this.validateElevation(parseFloat(parts[2]));
                 }
             }
         }
@@ -221,6 +221,26 @@ class CoordinateParser {
             lon: coordinate.lon,
             elevation: elevation !== undefined ? elevation : null
         };
+    }
+
+    /**
+     * Validate elevation value
+     * @param {number} elev - Elevation value
+     * @returns {number|null} - Valid elevation or null
+     */
+    validateElevation(elev) {
+        // Check for valid number
+        if (isNaN(elev) || !isFinite(elev)) {
+            return null;
+        }
+        
+        // Reasonable bounds: ±11km (higher than Everest, lower than challenger deep)
+        const MAX_ELEVATION = 11000; // meters
+        if (Math.abs(elev) > MAX_ELEVATION) {
+            return null;
+        }
+        
+        return elev;
     }
 
     /**

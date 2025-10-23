@@ -999,28 +999,88 @@ class GPSCalculatorApp {
             return;
         }
 
-        container.innerHTML = calculations.map(calc => {
+        // Clear container safely
+        container.innerHTML = '';
+        
+        // Use safe DOM methods instead of innerHTML for user input
+        calculations.forEach(calc => {
             const isExpired = this.storageManager.isExpired(calc);
             const expirationDate = new Date(calc.expiration).toLocaleString();
             
-            return `
-                <div class="saved-calculation-item ${isExpired ? 'expired' : ''}" data-id="${calc.id}">
-                    <h4>${calc.data.name || 'Unnamed Calculation'}</h4>
-                    <div class="saved-calculation-meta">
-                        <div>Saved: ${calc.data.timestamp}</div>
-                        <div>Expires: ${expirationDate}</div>
-                        <div>Coordinates: ${calc.data.coordinates?.length || 0}</div>
-                        ${calc.shared ? `<div>Shared: ${calc.shareId}</div>` : ''}
-                        ${isExpired ? '<div style="color: #ff6b6b;">EXPIRED</div>' : ''}
-                    </div>
-                    <div class="saved-calculation-actions">
-                        <button onclick="app.loadCalculation('${calc.id}')" ${isExpired ? 'disabled' : ''}>Load</button>
-                        <button onclick="app.deleteCalculation('${calc.id}')">Delete</button>
-                        ${calc.shared ? `<button onclick="app.showShareInfo('${calc.shareId}')">Share Info</button>` : ''}
-                    </div>
-                </div>
-            `;
-        }).join('');
+            // Create container div
+            const itemDiv = document.createElement('div');
+            itemDiv.className = `saved-calculation-item ${isExpired ? 'expired' : ''}`;
+            itemDiv.dataset.id = calc.id;
+            
+            // Create title (safely handle user input)
+            const titleH4 = document.createElement('h4');
+            titleH4.textContent = calc.data.name || 'Unnamed Calculation';
+            itemDiv.appendChild(titleH4);
+            
+            // Create metadata section
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'saved-calculation-meta';
+            
+            // Saved date
+            const savedDiv = document.createElement('div');
+            savedDiv.textContent = `Saved: ${calc.data.timestamp}`;
+            metaDiv.appendChild(savedDiv);
+            
+            // Expiration date
+            const expiresDiv = document.createElement('div');
+            expiresDiv.textContent = `Expires: ${expirationDate}`;
+            metaDiv.appendChild(expiresDiv);
+            
+            // Coordinates count
+            const coordsDiv = document.createElement('div');
+            coordsDiv.textContent = `Coordinates: ${calc.data.coordinates?.length || 0}`;
+            metaDiv.appendChild(coordsDiv);
+            
+            // Shared info (if applicable)
+            if (calc.shared) {
+                const sharedDiv = document.createElement('div');
+                sharedDiv.textContent = `Shared: ${calc.shareId}`;
+                metaDiv.appendChild(sharedDiv);
+            }
+            
+            // Expired indicator
+            if (isExpired) {
+                const expiredDiv = document.createElement('div');
+                expiredDiv.style.color = '#ff6b6b';
+                expiredDiv.textContent = 'EXPIRED';
+                metaDiv.appendChild(expiredDiv);
+            }
+            
+            itemDiv.appendChild(metaDiv);
+            
+            // Create actions section
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'saved-calculation-actions';
+            
+            // Load button
+            const loadBtn = document.createElement('button');
+            loadBtn.textContent = 'Load';
+            if (isExpired) loadBtn.disabled = true;
+            loadBtn.onclick = () => this.loadCalculation(calc.id);
+            actionsDiv.appendChild(loadBtn);
+            
+            // Delete button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.onclick = () => this.deleteCalculation(calc.id);
+            actionsDiv.appendChild(deleteBtn);
+            
+            // Share info button (if applicable)
+            if (calc.shared) {
+                const shareBtn = document.createElement('button');
+                shareBtn.textContent = 'Share Info';
+                shareBtn.onclick = () => this.showShareInfo(calc.shareId);
+                actionsDiv.appendChild(shareBtn);
+            }
+            
+            itemDiv.appendChild(actionsDiv);
+            container.appendChild(itemDiv);
+        });
     }
 
     /**

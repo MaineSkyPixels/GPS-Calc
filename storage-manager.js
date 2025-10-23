@@ -1,16 +1,110 @@
 /**
  * Storage Manager for GPS Calculator
  * Handles local storage, expiration, and sharing functionality
+ * WITH SECURITY ENHANCEMENTS
  */
+
+// ============================================================================
+// SECURITY UTILITIES
+// ============================================================================
+
+/**
+ * Sanitize HTML to prevent XSS attacks
+ * @param {string} str - String to sanitize
+ * @returns {string} - Sanitized string safe for HTML context
+ */
+function sanitizeHtml(str) {
+    if (typeof str !== 'string') return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Escape HTML special characters
+ * @param {string} text - Text to escape
+ * @returns {string} - Escaped text
+ */
+function escapeHtml(text) {
+    if (typeof text !== 'string') return '';
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, char => map[char]);
+}
+
+/**
+ * Validate and sanitize calculation name
+ * @param {string} name - Calculation name
+ * @returns {string} - Sanitized name
+ */
+function validateCalculationName(name) {
+    if (typeof name !== 'string') return 'Unnamed Calculation';
+    const trimmed = name.trim().substring(0, 255); // Max 255 chars
+    return sanitizeHtml(trimmed);
+}
+
+// ============================================================================
+// API CONFIGURATION
+// ============================================================================
+
+/**
+ * Get configured API URL with environment and fallback support
+ * @returns {string} - API base URL
+ */
+function getApiBaseUrl() {
+    // Check for environment variable in window object (set by build process or server)
+    if (window.API_BASE_URL) {
+        return window.API_BASE_URL;
+    }
+    
+    // Check for localStorage override (development convenience)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const localOverride = localStorage.getItem('gps_api_url_override');
+        if (localOverride) {
+            console.warn('Using localStorage API URL override (dev only):', localOverride);
+            return localOverride;
+        }
+    }
+    
+    // Production default - use current domain as base
+    // This allows deployment on any domain
+    return `${window.location.protocol}//${window.location.host}/api`;
+}
+
 class StorageManager {
     constructor() {
         this.storageKey = 'gps_calculations';
         this.sharedKey = 'gps_shared';
         this.maxLocalItems = 50; // Maximum local calculations to store
+        this.maxStorageSize = 5 * 1024 * 1024; // 5MB max for localStorage
         this.cleanupInterval = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        this.apiBaseUrl = getApiBaseUrl();
         
         // Start cleanup interval
         this.startCleanupInterval();
+    }
+
+    /**
+     * Check available localStorage space
+     * @returns {number} - Available bytes
+     */
+    getAvailableStorageSpace() {
+        try {
+            const test = '__localStorage_test__';
+            localStorage.setItem(test, test);
+            localStorage.removeItem(test);
+            
+            const total = this.maxStorageSize;
+            const used = new Blob(Object.values(localStorage)).size;
+            return Math.max(0, total - used);
+        } catch (e) {
+            return 0;
+        }
     }
 
     /**
@@ -45,6 +139,11 @@ class StorageManager {
      * @returns {string} - Share ID if shared, null if local only
      */
     async saveCalculation(calculation, expiration = '24hr', share = false) {
+        // Sanitize calculation name
+        if (calculation.name) {
+            calculation.name = validateCalculationName(calculation.name);
+        }
+        
         const shareId = share ? this.generateShareId() : null;
         const expirationTime = this.getExpirationTime(expiration);
         
@@ -101,11 +200,18 @@ class StorageManager {
     }
 
     /**
-     * Save to local storage
+     * Save to local storage with size validation
      * @param {Object} calculationData - Calculation data to save
      */
     saveToLocalStorage(calculationData) {
         try {
+            // Check available space before saving
+            const dataSize = new Blob([JSON.stringify(calculationData)]).size;
+            if (dataSize > this.getAvailableStorageSpace()) {
+                console.warn('localStorage nearly full, cleaning old items');
+                this.cleanupExpired();
+            }
+            
             const existing = this.getLocalCalculations();
             existing.push(calculationData);
             
@@ -117,7 +223,12 @@ class StorageManager {
             
             localStorage.setItem(this.storageKey, JSON.stringify(existing));
         } catch (error) {
-            console.error('Failed to save to local storage:', error);
+            if (error.name === 'QuotaExceededError') {
+                console.error('localStorage quota exceeded');
+                this.cleanupExpired();
+            } else {
+                console.error('Failed to save to local storage:', error);
+            }
         }
     }
 
@@ -151,6 +262,11 @@ class StorageManager {
      * @returns {Object|null} - Calculation data or null
      */
     async getSharedCalculation(shareId) {
+        // Validate share ID format to prevent injection
+        if (!this.isValidShareId(shareId)) {
+            throw new Error('Invalid share ID format');
+        }
+        
         // First check local storage
         const calculations = this.getLocalCalculations();
         const localCalc = calculations.find(calc => calc.shareId === shareId);
@@ -169,6 +285,17 @@ class StorageManager {
             console.error('Failed to fetch shared calculation:', error);
             return null;
         }
+    }
+
+    /**
+     * Validate share ID format (YYYY-NNNN-XXXX)
+     * @param {string} shareId - Share ID to validate
+     * @returns {boolean} - True if valid format
+     */
+    isValidShareId(shareId) {
+        if (typeof shareId !== 'string') return false;
+        const pattern = /^\d{4}-\d{4}-[A-Z]{4}$/;
+        return pattern.test(shareId);
     }
 
     /**
@@ -194,12 +321,24 @@ class StorageManager {
     }
 
     /**
-     * Start cleanup interval
+     * Start cleanup interval with safety checks
      */
     startCleanupInterval() {
-        setInterval(() => {
-            this.cleanupExpired();
+        // Use visibility API to avoid running in background
+        this.cleanupIntervalId = setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                this.cleanupExpired();
+            }
         }, this.cleanupInterval);
+    }
+
+    /**
+     * Stop cleanup interval (for cleanup)
+     */
+    stopCleanupInterval() {
+        if (this.cleanupIntervalId) {
+            clearInterval(this.cleanupIntervalId);
+        }
     }
 
     /**
@@ -207,97 +346,132 @@ class StorageManager {
      * @param {string} id - Calculation ID
      */
     deleteCalculation(id) {
+        if (typeof id !== 'string' || !id) return;
         const calculations = this.getLocalCalculations();
         const filtered = calculations.filter(calc => calc.id !== id);
         localStorage.setItem(this.storageKey, JSON.stringify(filtered));
     }
 
     /**
-     * Save to server (Cloudflare Workers API)
-     * @param {Object} calculationData - Calculation data with id, data, timestamp, expiration, shared, shareId
+     * Save to server (Cloudflare Workers API) with retry and validation
+     * @param {Object} calculationData - Calculation data
      */
-    async saveToServer(calculationData) {
-        try {
-            // Use Cloudflare Workers API endpoint
-            const apiUrl = 'https://gps-calc-server.maine-sky-pixels.workers.dev/api/share';
-            
-            // Extract the calculation period from expiration timestamp
-            const now = Date.now();
-            const expirationMs = calculationData.expiration - now;
-            let expirationPeriod = '24hr'; // default
-            
-            // Map milliseconds back to period string
-            if (expirationMs <= 60 * 60 * 1000) {
-                expirationPeriod = '1hr';
-            } else if (expirationMs <= 24 * 60 * 60 * 1000) {
-                expirationPeriod = '24hr';
-            } else if (expirationMs <= 3 * 24 * 60 * 60 * 1000) {
-                expirationPeriod = '3days';
-            } else if (expirationMs <= 7 * 24 * 60 * 60 * 1000) {
-                expirationPeriod = '7days';
-            } else {
-                expirationPeriod = '14days';
-            }
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    data: calculationData.data,
-                    expirationPeriod: expirationPeriod
-                })
-            });
+    async saveToServer(calculationData, maxRetries = 3) {
+        // Validate calculation data size (15MB max)
+        const dataSize = new Blob([JSON.stringify(calculationData.data)]).size;
+        if (dataSize > 15 * 1024 * 1024) {
+            throw new Error('Calculation data too large (max 15MB)');
+        }
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const apiUrl = `${this.apiBaseUrl}/share`;
+                
+                // Extract the calculation period from expiration timestamp
+                const now = Date.now();
+                const expirationMs = calculationData.expiration - now;
+                let expirationPeriod = '24hr'; // default
+                
+                // Map milliseconds back to period string
+                if (expirationMs <= 60 * 60 * 1000) {
+                    expirationPeriod = '1hr';
+                } else if (expirationMs <= 24 * 60 * 60 * 1000) {
+                    expirationPeriod = '24hr';
+                } else if (expirationMs <= 3 * 24 * 60 * 60 * 1000) {
+                    expirationPeriod = '3days';
+                } else if (expirationMs <= 7 * 24 * 60 * 60 * 1000) {
+                    expirationPeriod = '7days';
+                } else {
+                    expirationPeriod = '14days';
+                }
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        data: calculationData.data,
+                        expirationPeriod: expirationPeriod
+                    }),
+                    timeout: 10000 // 10 second timeout
+                });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-            }
+                if (!response.ok) {
+                    if (response.status === 409 && attempt < maxRetries) {
+                        // Conflict (collision) - retry with exponential backoff
+                        const delay = Math.pow(2, attempt) * 1000;
+                        console.warn(`Share ID collision, retrying in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    
+                    const errorText = await response.text();
+                    throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                }
 
-            const result = await response.json();
-            console.log('Saved to server with share ID:', result.shareId);
-            return { success: true, shareId: result.shareId };
-        } catch (error) {
-            console.error('Error saving to server:', error);
-            // Fallback to local storage if server fails
-            return { success: false, error: error.message };
+                const result = await response.json();
+                console.log('Saved to server with share ID:', result.shareId);
+                return { success: true, shareId: result.shareId };
+                
+            } catch (error) {
+                if (attempt === maxRetries) {
+                    console.error('Error saving to server after retries:', error);
+                    throw error;
+                }
+                const delay = Math.pow(2, attempt) * 1000;
+                console.warn(`Save attempt ${attempt} failed, retrying in ${delay}ms:`, error.message);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
     }
 
     /**
-     * Fetch from server (Cloudflare Workers API)
+     * Fetch from server with validation
      * @param {string} shareId - Share ID
      */
-    async fetchFromServer(shareId) {
-        try {
-            // Use Cloudflare Workers API endpoint
-            const apiUrl = `https://gps-calc-server.maine-sky-pixels.workers.dev/api/share/${shareId}`;
-            
-            const response = await fetch(apiUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
+    async fetchFromServer(shareId, maxRetries = 3) {
+        // Validate share ID format
+        if (!this.isValidShareId(shareId)) {
+            throw new Error('Invalid share ID format');
+        }
+        
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const apiUrl = `${this.apiBaseUrl}/share/${shareId}`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    timeout: 10000 // 10 second timeout
+                });
+
+                if (response.status === 404) {
+                    return null; // Calculation not found
                 }
-            });
 
-            if (response.status === 404) {
-                return null; // Calculation not found
+                if (response.status === 410) {
+                    throw new Error('Calculation has expired');
+                }
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                return result.data; // Return the calculation data
+                
+            } catch (error) {
+                if (attempt === maxRetries) {
+                    console.error('Failed to fetch shared calculation after retries:', error);
+                    return null;
+                }
+                const delay = Math.pow(2, attempt) * 100; // Shorter delays for fetches
+                console.warn(`Fetch attempt ${attempt} failed, retrying in ${delay}ms:`, error.message);
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
-
-            if (response.status === 410) {
-                throw new Error('Calculation has expired');
-            }
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-            return result.data; // Return the calculation data
-        } catch (error) {
-            console.error('Error fetching from server:', error);
-            return null;
         }
     }
 
@@ -307,7 +481,11 @@ class StorageManager {
      * @returns {Promise<string|null>} - Promise that resolves to QR code data URL
      */
     async generateQRCode(shareId) {
-        const url = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
+        if (!this.isValidShareId(shareId)) {
+            throw new Error('Invalid share ID format');
+        }
+        
+        const url = `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(shareId)}`;
         
         return new Promise((resolve) => {
             try {
@@ -360,6 +538,14 @@ class StorageManager {
      * @returns {string} - Sharing URL
      */
     getSharingUrl(shareId) {
-        return `${window.location.origin}${window.location.pathname}?share=${shareId}`;
+        if (!this.isValidShareId(shareId)) {
+            throw new Error('Invalid share ID format');
+        }
+        return `${window.location.origin}${window.location.pathname}?share=${encodeURIComponent(shareId)}`;
     }
+}
+
+// Export security utilities for use elsewhere
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { StorageManager, sanitizeHtml, escapeHtml, validateCalculationName };
 }
