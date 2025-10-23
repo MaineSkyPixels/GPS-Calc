@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Coordinate Calculator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GPS Coordinate Calculator</h1>
+            <p>Convert between GPS coordinate formats and calculate distances between multiple points</p>
+        </header>
+
+        <!-- Section 1: Coordinate Format Converter -->
+        <section class="converter-section">
+            <h2>Coordinate Format Converter <span class="help-icon" onclick="showHelpPopup('converter')">❓</span></h2>
+            <div class="converter-container">
+                <div class="input-group">
+                    <label for="coordinate-input">Paste GPS Coordinates:</label>
+                    <textarea id="coordinate-input" placeholder="Paste coordinates here (e.g., 44° 28' 24.32661&quot; -70° 53' 19.05717&quot; or 44.4734245277 -70.88862750833)"></textarea>
+                    <button id="convert-btn" class="btn-primary">Convert</button>
+                </div>
+                
+                <div class="output-group">
+                    <label>Converted Result:</label>
+                    <div id="conversion-result" class="result-display">
+                        <div class="format-display">
+                            <strong>Decimal Degrees:</strong>
+                            <div id="decimal-output" class="coordinate-output"></div>
+                        </div>
+                        <div class="format-display">
+                            <strong>Degrees Minutes Seconds:</strong>
+                            <div id="dms-output" class="coordinate-output"></div>
+                        </div>
+                    </div>
+                    <button id="copy-converted-btn" class="btn-secondary">Copy to Clipboard</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 2: Distance Calculator -->
+        <section class="calculator-section">
+            <h2>Distance Calculator <span class="help-icon" onclick="showHelpPopup('distance-calculator')">❓</span></h2>
+            
+            <!-- Input Mode Toggle -->
+            <div class="mode-toggle">
+                <label class="toggle-label">
+                    <input type="radio" name="input-mode" value="paste" checked>
+                    <span>Paste Mode</span>
+                </label>
+                <label class="toggle-label">
+                    <input type="radio" name="input-mode" value="manual">
+                    <span>Manual Entry</span>
+                </label>
+            </div>
+
+            <!-- Paste Mode -->
+            <div id="paste-mode" class="input-mode">
+                <div class="paste-container">
+                    <label for="coordinates-paste">Paste Multiple Coordinates (one per line): <span class="help-icon" onclick="showHelpPopup('paste-mode')">❓</span></label>
+                    <textarea id="coordinates-paste" placeholder="44.4734245277 -70.88862750833 1234&#10;45.1234567890 -71.9876543210 5678&#10;..."></textarea>
+                    
+                    <div class="elevation-unit-group">
+                        <label>Default Elevation Unit: <span class="help-icon" onclick="showHelpPopup('elevation-units')">❓</span></label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="default-elevation" value="meters" checked> Meters</label>
+                            <label><input type="radio" name="default-elevation" value="feet"> Feet</label>
+                            <label><input type="radio" name="default-elevation" value="survey-feet"> US Survey Feet</label>
+                        </div>
+                    </div>
+                    
+                    <button id="parse-coordinates-btn" class="btn-primary">Parse Coordinates</button>
+                </div>
+            </div>
+
+            <!-- Manual Entry Mode -->
+            <div id="manual-mode" class="input-mode" style="display: none;">
+                <div class="coordinates-table-container">
+                    <div class="table-header">
+                        <h3>Coordinate Sets <span class="help-icon" onclick="showHelpPopup('manual-mode')">❓</span></h3>
+                        <div class="table-controls">
+                            <div class="reference-selector">
+                                <label for="reference-point">Reference Point:</label>
+                                <select id="reference-point">
+                                    <option value="0">Point 1</option>
+                                </select>
+                            </div>
+                            <div class="table-buttons">
+                                <button id="add-coordinate-btn" class="btn-small">+ Add</button>
+                                <button id="remove-coordinate-btn" class="btn-small">- Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="coordinates-table" class="coordinates-table">
+                        <!-- Dynamic coordinate rows will be inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distance Calculation Controls -->
+            <div class="calculation-controls">
+                <button id="calculate-distance-btn" class="btn-primary">Calculate Distances</button>
+                <div class="distance-options">
+                    <div class="unit-system-selector">
+                        <label for="unit-system">Unit System: <span class="help-icon" onclick="showHelpPopup('unit-system')">❓</span></label>
+                        <select id="unit-system">
+                            <option value="meters">Meters (mm, cm, m, km)</option>
+                            <option value="feet">Feet (in, ft, mi)</option>
+                            <option value="survey-feet">US Survey Feet (in, ft, mi)</option>
+                        </select>
+                    </div>
+                    <div class="calculation-options">
+                        <label><input type="checkbox" id="show-2d" checked> Show 2D Distances</label>
+                        <label><input type="checkbox" id="show-3d" checked> Show 3D Distances</label>
+                        <label><input type="checkbox" id="reference-mode"> Reference Point Mode <span class="help-icon" onclick="showHelpPopup('reference-mode')">❓</span></label>
+                        <label><input type="checkbox" id="condensed-output" checked> Condensed Output <span class="help-icon" onclick="showHelpPopup('condensed-output')">❓</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Display -->
+            <div id="distance-results" class="results-container" style="display: none;">
+                <div class="results-header">
+                    <h3>Distance Results</h3>
+                    <div class="results-actions">
+                        <button id="save-calculation-btn" class="btn-secondary">💾 Save</button>
+                        <button id="share-calculation-btn" class="btn-secondary">🔗 Share</button>
+                        <button id="download-report-btn" class="btn-secondary">📄 Download Report</button>
+                        <button id="copy-results-btn" class="btn-secondary">📋 Copy</button>
+                    </div>
+                </div>
+                
+                <div id="distance-matrix" class="distance-matrix">
+                    <!-- Distance matrix will be inserted here -->
+                </div>
+                
+                <div id="summary-stats" class="summary-stats">
+                    <!-- Summary statistics will be inserted here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Storage Management Section -->
+        <section id="storage-section" class="storage-section" style="display: none;">
+            <h2>Saved Calculations <span class="help-icon" onclick="showHelpPopup('storage')">❓</span></h2>
+            <div class="storage-controls">
+                <button id="load-calculation-btn" class="btn-primary">📂 Load Saved</button>
+                <button id="clear-storage-btn" class="btn-secondary">🗑️ Clear All</button>
+            </div>
+            <div id="saved-calculations" class="saved-calculations">
+                <!-- Saved calculations will be listed here -->
+            </div>
+        </section>
+    </div>
+
+    <!-- Save/Share Modal -->
+    <div id="save-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Save Calculation</h3>
+                <button class="close-modal" onclick="closeSaveModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="calculation-name">Name (optional):</label>
+                    <input type="text" id="calculation-name" placeholder="My GPS Calculation">
+                </div>
+                <div class="form-group">
+                    <label for="expiration-period">Expiration:</label>
+                    <select id="expiration-period">
+                        <option value="1hr">1 Hour</option>
+                        <option value="24hr" selected>24 Hours</option>
+                        <option value="3days">3 Days</option>
+                        <option value="7days">7 Days</option>
+                        <option value="14days">14 Days</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="share-calculation"> Share with others
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="confirm-save-btn" class="btn-primary">Save</button>
+                <button class="btn-secondary" onclick="closeSaveModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="share-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Share Calculation</h3>
+                <button class="close-modal" onclick="closeShareModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="share-info">
+                    <p>Your calculation has been shared with ID:</p>
+                    <div class="share-id-display">
+                        <span id="share-id-text"></span>
+                        <button id="copy-share-id" class="btn-small">📋</button>
+                    </div>
+                </div>
+                <div class="share-url">
+                    <label>Share URL:</label>
+                    <div class="url-display">
+                        <input type="text" id="share-url-input" readonly>
+                        <button id="copy-share-url" class="btn-small">📋</button>
+                    </div>
+                </div>
+                <div class="qr-code-section">
+                    <label>QR Code:</label>
+                    <div id="qr-code-container">
+                        <!-- QR code will be generated here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeShareModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="coordinate-parser.js"></script>
+    <script src="coordinate-converter.js"></script>
+    <script src="distance-calculator.js"></script>
+    <script src="storage-manager.js"></script>
+    <script src="report-generator.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
