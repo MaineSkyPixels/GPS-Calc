@@ -43,7 +43,7 @@ If the automated script doesn't work, follow the manual 8-step process in MONORE
 1. Go to https://github.com/new
 2. Name: `GPS-Coordinate-Calculator`
 3. Description: "Full-stack GPS coordinate calculator - monorepo"
-4. Set to Public
+4. Set to **PRIVATE** ← Important for security
 5. Click "Create repository"
 6. Copy the repository URL
 

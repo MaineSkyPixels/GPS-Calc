@@ -135,6 +135,7 @@ GPS-Coordinate-Calculator/ (Main repo)
 
 ```bash
 # Create new GitHub repo: GPS-Coordinate-Calculator
+# Make it PRIVATE for security
 # Clone it locally
 git clone https://github.com/MaineSkyPixels/GPS-Coordinate-Calculator.git
 cd GPS-Coordinate-Calculator
