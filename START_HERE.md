@@ -69,6 +69,14 @@ See IMPLEMENTATION_GUIDE.md Phase 7
 git push origin main
 ```
 
+### Step 7: Make Old Repos Private (After Verifying New Repo Works)
+After 1-2 hours of using the new monorepo and confirming everything works:
+- Go to GPS-Calc Settings → Make Private
+- Go to GPSCalcServer Settings → Make Private
+- Update descriptions to reference the new monorepo
+
+See IMPLEMENTATION_GUIDE.md Phase 11 for detailed steps.
+
 ---
 
 ## ⚠️ Important - Get These From Cloudflare FIRST

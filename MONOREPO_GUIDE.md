@@ -700,3 +700,24 @@ If you prefer to keep repositories separate:
 
 **Last Updated**: October 23, 2025
 **Version**: 1.0.0
+
+### Step 16: Archive Old Repositories
+
+**DO NOT DELETE**, just archive and make private:
+
+1. Go to `GPS-Calc` repository Settings
+   - [ ] Make PRIVATE (if currently public)
+   - [ ] Add description: "ARCHIVED - See GPS-Coordinate-Calculator monorepo"
+   - Note: Keep as archive for rollback capability
+
+2. Go to `GPSCalcServer` repository Settings
+   - [ ] Make PRIVATE (if currently public)
+   - [ ] Add description: "ARCHIVED - See GPS-Coordinate-Calculator monorepo"
+   - Note: Keep as archive for rollback capability
+
+**How to make private:**
+1. Go to repository Settings
+2. Scroll to "Danger Zone"
+3. Click "Change repository visibility"
+4. Select "Private"
+5. Confirm

@@ -233,14 +233,29 @@ curl https://gps-calc-server.maine-sky-pixels.workers.dev/
 
 ## Phase 11: Archive Old Repositories
 
-**DO NOT DELETE**, just archive:
+**DO NOT DELETE**, just archive and make private:
 
-1. Go to GPS-Calc repository Settings
-2. Note: Keep as archive (don't delete)
-3. Go to GPSCalcServer repository Settings
-4. Note: Keep as archive (don't delete)
+```bash
+# For GPS-Calc repository:
+# 1. Go to: https://github.com/MaineSkyPixels/GPS-Calc/settings
+# 2. Scroll to "Danger Zone"
+# 3. Click "Change repository visibility"
+# 4. Select "Private"
+# 5. Update description: "ARCHIVED - See GPS-Coordinate-Calculator monorepo"
 
-This allows reverting if needed.
+# For GPSCalcServer repository:
+# 1. Go to: https://github.com/MaineSkyPixels/GPSCalcServer/settings
+# 2. Scroll to "Danger Zone"
+# 3. Click "Change repository visibility"
+# 4. Select "Private"
+# 5. Update description: "ARCHIVED - See GPS-Coordinate-Calculator monorepo"
+```
+
+### Why make them private?
+- ✅ Protects sensitive configuration
+- ✅ Prevents confusion with new monorepo
+- ✅ Maintains security of archived code
+- ✅ Keeps them for rollback if needed
 
 ---
 
