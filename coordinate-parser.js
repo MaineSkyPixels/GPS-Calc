@@ -14,10 +14,13 @@ class CoordinateParser {
             dmsWithCardinal: /([NS])(\d+(?:\.\d+)?)°\s*(\d+(?:\.\d+)?)['′]\s*(\d+(?:\.\d+)?)["″]\s*,?\s*([EW])(\d+(?:\.\d+)?)°\s*(\d+(?:\.\d+)?)['′]\s*(\d+(?:\.\d+)?)["″]/i,
             
             // Decimal degrees: 44.4734245277 -70.88862750833
-            decimalDegrees: /(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/,
+            decimalDegrees: /^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)$/,
             
             // Decimal with cardinal: N44.4734245277 W70.88862750833
-            decimalWithCardinal: /([NS])(\d+(?:\.\d+)?)\s*,?\s*([EW])(\d+(?:\.\d+)?)/i
+            decimalWithCardinal: /([NS])(\d+(?:\.\d+)?)\s*,?\s*([EW])(\d+(?:\.\d+)?)/i,
+
+            // Space separated DMS (OPUS style): 41 48 15.79259 112 50 1.04150
+            dmsSpaceSeparated: /^(-?\d+)\s+(\d+)\s+(\d+(?:\.\d+)?)\s+(-?\d+)\s+(\d+)\s+(\d+(?:\.\d+)?)$/
         };
     }
 
@@ -34,7 +37,13 @@ class CoordinateParser {
         const trimmedInput = input.trim();
         
         // Try each pattern in order of specificity
-        let match = this.patterns.dmsWithCardinal.exec(trimmedInput);
+        // Try space-separated DMS first as it's very specific
+        let match = this.patterns.dmsSpaceSeparated.exec(trimmedInput);
+        if (match) {
+            return this.parseDMSSpaceSeparated(match);
+        }
+
+        match = this.patterns.dmsWithCardinal.exec(trimmedInput);
         if (match) {
             return this.parseDMSWithCardinal(match);
         }
@@ -55,6 +64,20 @@ class CoordinateParser {
         }
 
         return null;
+    }
+
+    /**
+     * Parse DMS format separated by spaces
+     * @param {Array} match - Regex match array
+     * @returns {Object} - {lat: number, lon: number}
+     */
+    parseDMSSpaceSeparated(match) {
+        const [, latDeg, latMin, latSec, lonDeg, lonMin, lonSec] = match;
+        
+        let lat = this.dmsToDecimal(parseFloat(latDeg), parseFloat(latMin), parseFloat(latSec));
+        let lon = this.dmsToDecimal(parseFloat(lonDeg), parseFloat(lonMin), parseFloat(lonSec));
+        
+        return { lat, lon };
     }
 
     /**
@@ -188,18 +211,25 @@ class CoordinateParser {
             elevation = parseFloat(parts[2]);
         } else {
             // More than 3 parts - try to find coordinate pattern
-            // Look for the coordinate part (contains degree symbols or is decimal)
-            for (let i = 0; i < parts.length - 1; i++) {
-                const testStr = parts.slice(i, i + 2).join(' ');
-                const coord = this.parseCoordinate(testStr);
-                if (coord) {
-                    coordinateStr = testStr;
-                    // Check if there's an elevation after the coordinate
-                    if (i + 2 < parts.length) {
-                        elevation = parseFloat(parts[i + 2]);
+            // Try 6 parts first (for space-separated DMS), then 2 parts (for decimal)
+            const coordinateCounts = [6, 2];
+            
+            for (const count of coordinateCounts) {
+                if (parts.length >= count) {
+                    for (let i = 0; i <= parts.length - count; i++) {
+                        const testStr = parts.slice(i, i + count).join(' ');
+                        const coord = this.parseCoordinate(testStr);
+                        if (coord) {
+                            coordinateStr = testStr;
+                            // Check if there's an elevation after the coordinate
+                            if (i + count < parts.length) {
+                                elevation = parseFloat(parts[i + count]);
+                            }
+                            break;
+                        }
                     }
-                    break;
                 }
+                if (coordinateStr) break;
             }
             
             if (!coordinateStr) {
@@ -236,7 +266,8 @@ class CoordinateParser {
         const trimmedInput = input.trim();
 
         if (this.patterns.dmsWithCardinal.test(trimmedInput) || 
-            this.patterns.dmsWithSymbols.test(trimmedInput)) {
+            this.patterns.dmsWithSymbols.test(trimmedInput) ||
+            this.patterns.dmsSpaceSeparated.test(trimmedInput)) {
             return 'dms';
         }
 
