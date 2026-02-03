@@ -1235,6 +1235,12 @@ function showHelpPopup(section) {
                     <li>Decimal Degrees: <code>44.4734245277 -70.88862750833</code></li>
                     <li>DMS with symbols: <code>44° 28' 24.32661" -70° 53' 19.05717"</code></li>
                     <li>DMS with cardinal: <code>N44° 28' 24.32661" W70° 53' 19.05717"</code></li>
+                    <li>Space separated DMS: <code>41 48 15.79259 112 50 1.04150</code> (Defaults to North/West)</li>
+                </ul>
+                <p><strong>Coordinate Signs:</strong></p>
+                <ul>
+                    <li><strong>Latitude:</strong> North is positive (+), South is negative (-)</li>
+                    <li><strong>Longitude:</strong> East is positive (+), West is negative (-)</li>
                 </ul>
                 <p><strong>How to use:</strong></p>
                 <ol>
@@ -1270,10 +1276,11 @@ function showHelpPopup(section) {
                 <ol>
                     <li>Paste multiple coordinate sets, one per line</li>
                     <li>Format: <code>latitude longitude elevation</code></li>
-                    <li>Example: <code>44.4734245277 -70.88862750833 1234</code></li>
+                    <li>Example: <code>41 48 15.79259 112 50 1.04150 1234.5</code></li>
                     <li>Click "Parse Coordinates" to process</li>
                 </ol>
                 <p><strong>Supported separators:</strong> spaces, commas, tabs</p>
+                <p><strong>Coordinate Signs:</strong> West is negative (-), East is positive (+)</p>
                 <p><strong>Elevation units:</strong> Set default unit for all coordinates</p>
             `
         },
@@ -1352,9 +1359,8 @@ function showHelpPopup(section) {
                 </ul>
                 <p><strong>Unit Scaling:</strong></p>
                 <ul>
-                    <li><strong>Meters:</strong> 0.1mm → 1cm → 1m → 1km</li>
-                    <li><strong>Feet:</strong> 0.1in → 1ft → 1mi</li>
-                    <li><strong>US Survey Feet:</strong> 0.1in → 1ft → 1mi</li>
+                    <li><strong>Meters:</strong> mm → cm → m → km</li>
+                    <li><strong>Feet/Survey Feet:</strong> in → ft → mi</li>
                 </ul>
                 <p><strong>Note:</strong> All calculations are performed in meters internally, then converted to the selected unit system for display.</p>
             `
